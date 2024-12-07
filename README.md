@@ -1,7 +1,13 @@
 # Script to digitize your vinyls
 
 ## Description
+A short script to record digitize your vinyls via the arecord command on a linux system.
 Upon starting the script, you will land in the main menu in which you can choose to start the recording.
+
+## Requirements
+Almost any linux distribution will suffice.
+Noteworthy commands used: sox, flac, arecord 
+If you dont have them, get them via package manager.
 
 # How it is used
 You *must* find out which hardware device your input stream lands, so that you can give the arecord command the correct audio interface.
