@@ -61,7 +61,7 @@ start_recording() {
         if [ -f "$file" ]; then
             TRACK_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
             TRACK_NAME_CLEAN=$(echo "${TRACK_NAMES[$((TRACK_NUMBER-1))]}" | sed 's/ /_/g')
-            flac "$file" --output-name="${TRACK_NUMBER} - ${TRACK_NAME_CLEAN}.flac"-output-prefix="$TRACK_NUMBER"
+            flac "$file" --output-name=" - ${TRACK_NAME_CLEAN}.flac" --output-prefix="$TRACK_NUMBER"
             rm "$file"
             ((TRACK_NUMBER++))
         fi
