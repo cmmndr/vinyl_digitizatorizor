@@ -7,15 +7,16 @@ command -v sox >/dev/null 2>&1 || {
 }
 
 # First run check
-function init_check{
-	STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/vinyl_digitizatorizor/"
+function init_check {
+	STATE_DIR="$HOME/.local/state/vinyl_digitizatorizor/"
     STATE_FILE="$STATE_DIR/initialized"
 
 	if [ ! -f "$STATE_FILE" ]; then
     		echo "Vinyl Digitizatorizor has not yet been run, initializing..."
     		mkdir -p "$STATE_DIR"
     		touch "$STATE_FILE"
-            change_capturing_device
+            set_capturing_device
+            set_recording_directory
     fi
 	
 }
@@ -138,7 +139,22 @@ function options {
 		1) set_capturing_device ;;
 		2) set_recording_directory ;;
 		3) menu ;;
-		*) echo "Invalid Choice, please try again, this time with a number maybe? No pressure though, i can do this all day ¯\_(ツ)_/¯"
+		*) echo "Invalid Choice, please try again, this time with a number maybe? No pressure though, i can do this all day ¯\_(ツ)_/¯" ;;
+    esac
+}
+
+# Optionen
+function options {
+	echo "Options: "
+	echo "1. Change capturing device"
+	echo "2. Change recording directory"
+	echo "3. Back"
+	case $CHOICE in
+		1) set_capturing_device ;;
+		2) set_recording_directory ;;
+		3) menu ;;
+		*) echo "Invalid Choice, please try again, this time with a number maybe? No pressure though, i can do this all day ¯\_(ツ)_/¯" ;;
+    esac
 }
 
 # Set directory for recordings (current if left blank on init)
