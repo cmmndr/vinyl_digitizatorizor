@@ -8,20 +8,29 @@ command -v sox >/dev/null 2>&1 || {
 
 # First run check
 function init_check {
-	STATE_DIR="$HOME/.local/state/vinyl_digitizatorizor/"
-    STATE_FILE="$STATE_DIR/initialized"
-
-	if [ ! -f "$STATE_FILE" ]; then
+	CONFIG_DIR="$HOME/.config/vinyl_digitizatorizor/"
+    CONFIG_FILE="$CONFIG_DIR/config"
+	if [ ! -f "$CONFIG_FILE" ]; then
     		echo "Vinyl Digitizatorizor has not yet been run, initializing..."
-    		mkdir -p "$STATE_DIR"
-    		touch "$STATE_FILE"
+    		mkdir -p "$CONFIG_DIR"
+    		touch "$CONFIG_FILE"
             set_capturing_device
             set_recording_directory
+    else
+        source "$CONFIG_FILE"
     fi
+
 	
 }
 
-
+# Save config file
+function save_config {
+    cat > "$CONFIG_FILE" <<- EOF
+RECORDING_DIR="$RECORDING_DIR"
+HW_ID="$HW_ID"
+EOF
+    echo "Config saved!"
+}
 
 # Start recording for automated clipping
 function start_recording_auto_clip {
@@ -132,35 +141,30 @@ function start_recording_manual_clip {
 # Optionen
 function options {
 	echo "Options: "
-	echo "1. Change capturing device"
-	echo "2. Change recording directory"
+	echo "1. Change capturing device - current one is: $HW_ID"
+	echo "2. Change recording directory - current one is: $RECORDING_DIR"
 	echo "3. Back"
+    read -p "Choose an option: " CHOICE
 	case $CHOICE in
-		1) set_capturing_device ;;
-		2) set_recording_directory ;;
-		3) menu ;;
-		*) echo "Invalid Choice, please try again, this time with a number maybe? No pressure though, i can do this all day ¯\_(ツ)_/¯" ;;
-    esac
-}
-
-# Optionen
-function options {
-	echo "Options: "
-	echo "1. Change capturing device"
-	echo "2. Change recording directory"
-	echo "3. Back"
-	case $CHOICE in
-		1) set_capturing_device ;;
-		2) set_recording_directory ;;
-		3) menu ;;
+		1) set_capturing_device
+            options ;; 
+		2) set_recording_directory
+            options ;;
+		3) mainmenu ;;
 		*) echo "Invalid Choice, please try again, this time with a number maybe? No pressure though, i can do this all day ¯\_(ツ)_/¯" ;;
     esac
 }
 
 # Set directory for recordings (current if left blank on init)
 function set_recording_directory {
-    read -p "Where do you want your recordings to be saved? (Enter for current directory) " USER_DIR
-    BASE_DIR="$USER_DIR:-$(pwd)"
+    read -p "Where do you want your recordings to be saved? (Enter for current directory) " INPUT_DIR
+    if [ -z "$RECORDING_DIR" ]; then
+    	RECORDING_DIR="$(pwd)"
+    else
+        RECORDING_DIR="$INPUT_DIR"    
+    fi
+    
+    save_config
 }
 
 # Set audio recording device
@@ -168,6 +172,7 @@ function set_capturing_device {
     echo  "This program needs to know which device it should capture from, hence the following command will list all of the available options: "
 	arecord -l
 	read -p "Type in the ID of the device you want to use for capturing: " HW_ID
+    save_config
 }
 
 
