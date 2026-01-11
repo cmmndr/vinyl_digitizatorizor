@@ -31,7 +31,7 @@ start_recording() {
     RECORDING_PATH="${BASE_DIR}/${ARTIST_CLEAN}/${ALBUM_CLEAN}"
     mkdir -p "$RECORDING_PATH"
 
-    # Temporäre Aufnahmedatei
+    # Temporaere Aufnahmedatei
     TEMP_RECORDING=$(mktemp --suffix=.wav)
 
     echo "Aufnahme startet für $ARTIST - $ALBUM"
