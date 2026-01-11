@@ -1,19 +1,29 @@
 #!/bin/bash
 
-# Abhängigkeiten prüfen
+# Check dependencies
 command -v sox >/dev/null 2>&1 || { 
-    echo "sox wird benötigt. Installiere mit: sudo apt-get install sox"; 
+    echo "sox not installed. Install via sudo apt-get install sox or your preferred paket manager way"; 
     exit 1; 
 }
 
-# Get Capture Device
-HW_ID=$(arecord -l | awk -F'[: ]+' '/USB Audio/ {print $2; exit}')
+# First run check
+function init_check{
+	STATE_DIR="~/.local/state/vinyl_digitizatorizor/"
+	STATE_FILE="$STATE_DIR/initialized"
 
-# Verzeichnis für Aufnahmen
-BASE_DIR="~/Music/recordings/"
+	if [ ! -f "$STATE_FILE" ]; then
+    		echo "Vinyl Digitizatorizor has not yet been run, initializing..."
+    		mkdir -p "$STATE_DIR"
+    		touch "$STATE_FILE"
+            change_capturing_device
+    fi
+	
+}
 
 
-start_recording_autoclip() {
+
+# Start recording for automated clipping
+function start_recording_auto_clip {
     # Interpret und Album abfragen
     read -p "Bitte gib den Interpreten ein: " ARTIST
     ARTIST_CLEAN=$(echo "$ARTIST" | sed 's/[^a-zA-Z0-9äöüÄÖÜß ]/-/g')
@@ -73,39 +83,38 @@ start_recording_autoclip() {
     rm "$TEMP_RECORDING"
     echo "Tracks in $RECORDING_PATH gespeichert."
 }
-start_recording_selfclip() {
-# Vinylaufnahme
-	
-	# Interpret, Album,  abfragen
-	read -p "Bitte gib den Interpreten ein: " ARTIST
+# Start recording for later manual clipping
+function start_recording_manual_clip {	
+	# Ask for name of album artist and album itself
+	read -p "Enter name of the album artist: " ARTIST
 	ARTIST_CLEAN=$(echo "$ARTIST" | sed 's/[^a-zA-Z0-9äöüÄÖÜß ]/-/g')
-	read -p "Bitte gib den Albumnamen ein: " ALBUM
-    	ALBUM_CLEAN=$(echo "$ALBUM" | sed 's/[^a-zA-Z0-9äöüÄÖÜß ]/-/g')
+	read -p "Enter name of the album: " ALBUM
+    ALBUM_CLEAN=$(echo "$ALBUM" | sed 's/[^a-zA-Z0-9äöüÄÖÜß ]/-/g')
 
-	# Verzeichnis erstellen
+	# Create directory
 	RECORDING_PATH="${BASE_DIR}/${ARTIST_CLEAN}/${ALBUM_CLEAN}"
 	mkdir -p "$RECORDING_PATH"
 
-	# Temporäre Aufnahmedatei
+	# Temprorary recording file
 	TEMP_RECORDING=$(mktemp --suffix=.wav)
 
-	echo "Aufnahme startet für $ARTIST - $ALBUM "
-	echo "Drücke Enter, um die Aufnahme manuell zu beenden"
+	echo "Recording started for $ARTIST - $ALBUM "
 
-	# Aufnahme starten
+
+	# Start recording
 	arecord -D hw:${HW_ID},0 -f cd "$TEMP_RECORDING" &
 	RECORD_PID=$!
 
-	# Warte bis Aufnahme beendet wird
-	read -p "Drücke Enter, wenn die Albumaufnahme fertig ist: "
+	# Wait until the recording has finished
+	read -p "Press Enter to stop the recording: "
 	kill $RECORD_PID
 	wait $RECORD_PID 2>/dev/null
 
-	# Komplette Aufnahme speichern als Backup
+	# Save full recording just in case
 
 	sox "$TEMP_RECORDING" "$RECORDING_PATH/fullalbum.flac"
 
-	# Dateien umbenennen und in FLAC konvertieren
+	# Rename file and convert to FLAC
 	cd "$RECORDING_PATH"
  	if [ ! -f "${ALBUM_CLEAN}.flac" ]; then
 		flac "fullalbum.flac" --output-name="${ALBUM_CLEAN}.flac"
@@ -113,38 +122,66 @@ start_recording_selfclip() {
 		echo "Datei existiert schon, wird in ${ALBUM_CLEAN}_copy.flac umbenannt."
 		flac "fullalbum.flac" --output-name="${ALBUM_CLEAN}_copy.flac"
 	fi
-    	rm "$TEMP_RECORDING"
+    rm "$TEMP_RECORDING"
 	#rm "fullalbum.flac"
-    	echo "Tracks in $RECORDING_PATH gespeichert."
+    echo "Tracks in $RECORDING_PATH gespeichert."
 
 }
 
 # Optionen
-options(){
-	
-	echo "Um Aufnehmen zu koennen, muss der Befehl arecord das richtige Hardwaregeraet auswaehlen."
+function options {
+	echo "Options: "
+	echo "1. Change capturing device"
+	echo "2. Change recording directory"
+	echo "3. Back"
+	case $CHOICE in
+		1) set_capturing_device ;;
+		2) set_recording_directory ;;
+		3) menu ;;
+		*) echo "Invalid Choice, please try again, this time with a number maybe? No pressure though, i can do this all day ¯\_(ツ)_/¯"
+}
+
+# Set directory for recordings (current if left blank on init)
+function set_recording_directory {
+    read -p "Where do you want your recordings to be saved? (Enter for current directory) " USER_DIR
+    BASE_DIR="$USER_DIR:-$(pwd)"
+}
+
+# Set audio recording device
+function set_capturing_device {
+    echo  "This program needs to know which device it should capture from, hence the following command will list all of the available options: "
 	arecord -l
-	echo "Es muss aus dieser Liste ausgewaehlt werden um im Skript verwendet werden zu koennen."
-	read -p "Welche Ziffer ist das richtige Aufnahmegeraet?" HW_ID
+	read -p "Type in the ID of the device you want to use for capturing: " HW_ID
 }
 
 
 
 
-# Hauptmenü
-while true; do
-    echo "Audioaufnahme Menü:"
-    echo "1. Audiodatei aufnehmen und schnippseln lassen?"
-    echo "2. Audiodatei aufnehmen zum selbst schnippseln?"
-    echo "3. Optionen"
-    echo "4. Beenden"
-    read -p "Wähle eine Option: " CHOICE
+
+# Main Menu
+
+function mainmenu {
+
+    echo "Vinyl Digitizatorizor Main Menu: "
+    echo "1. Record a vinyl and attempt to auto-cut it?"
+    echo "2. Record a vinyl and save whole file to manually cut it?"
+    echo "3. Options"
+    echo "4. Exit"
+    read -p "Choose an option: " CHOICE
 
     case $CHOICE in
-        1) start_recording_autoclip ;;
-	2) start_recording_selfclip ;;
-	3) options ;;
+        1) start_recording_auto_clip ;;
+        2) start_recording_manual_clip ;;
+        3) options ;;
         4) exit 0 ;;
-        *) echo "Ungültige Eingabe. Bitte erneut versuchen." ;;
+        *) echo "Invalid option, try again... or don't idgaf ¯\_(ツ)_/¯." ;;
     esac
+
+
+}
+
+# main
+while true; do
+	init_check
+	mainmenu
 done
