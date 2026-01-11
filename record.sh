@@ -8,8 +8,8 @@ command -v sox >/dev/null 2>&1 || {
 
 # First run check
 function init_check{
-	STATE_DIR="~/.local/state/vinyl_digitizatorizor/"
-	STATE_FILE="$STATE_DIR/initialized"
+	STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/vinyl_digitizatorizor/"
+    STATE_FILE="$STATE_DIR/initialized"
 
 	if [ ! -f "$STATE_FILE" ]; then
     		echo "Vinyl Digitizatorizor has not yet been run, initializing..."
