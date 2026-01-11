@@ -6,11 +6,14 @@ command -v sox >/dev/null 2>&1 || {
     exit 1; 
 }
 
-# Verzeichnis für Aufnahmen
-BASE_DIR="/home/volumio/recordings"
-HW_ID=5
+# Get Capture Device
+HW_ID=$(arecord -l | awk -F'[: ]+' '/USB Audio/ {print $2; exit}')
 
-start_recording() {
+# Verzeichnis für Aufnahmen
+BASE_DIR="~/Music/recordings/"
+
+
+start_recording_autoclip() {
     # Interpret und Album abfragen
     read -p "Bitte gib den Interpreten ein: " ARTIST
     ARTIST_CLEAN=$(echo "$ARTIST" | sed 's/[^a-zA-Z0-9äöüÄÖÜß ]/-/g')
@@ -39,7 +42,7 @@ start_recording() {
     echo "Drücke Enter, um die Aufnahme manuell zu beenden"
 
     # Aufnahme starten
-    arecord -D hw:5,0 -f cd "$TEMP_RECORDING" &
+    arecord -D hw:${HW_ID},0 -f cd "$TEMP_RECORDING" &
     RECORD_PID=$!
 
     # Warte bis Aufnahme beendet wird
@@ -70,17 +73,14 @@ start_recording() {
     rm "$TEMP_RECORDING"
     echo "Tracks in $RECORDING_PATH gespeichert."
 }
-start_vinyl() {
+start_recording_selfclip() {
 # Vinylaufnahme
 	
-	# Interpret, Album, Vinylnummer und Vinylseite abfragen
+	# Interpret, Album,  abfragen
 	read -p "Bitte gib den Interpreten ein: " ARTIST
 	ARTIST_CLEAN=$(echo "$ARTIST" | sed 's/[^a-zA-Z0-9äöüÄÖÜß ]/-/g')
 	read -p "Bitte gib den Albumnamen ein: " ALBUM
     	ALBUM_CLEAN=$(echo "$ALBUM" | sed 's/[^a-zA-Z0-9äöüÄÖÜß ]/-/g')
-	#read -p "Bitte gib die Nummer der Vinyl ein: " VINYL_NUMBER
-	
-	#read -p "Bitte gib die Seite des Vinyls ein: " VINYL_SIDE
 
 	# Verzeichnis erstellen
 	RECORDING_PATH="${BASE_DIR}/${ARTIST_CLEAN}/${ALBUM_CLEAN}"
@@ -101,7 +101,7 @@ start_vinyl() {
 	kill $RECORD_PID
 	wait $RECORD_PID 2>/dev/null
 
-	# Volle Laenge speichern falls silence detection nich funzelt und zum generellen abgleichen der Tracks
+	# Komplette Aufnahme speichern als Backup
 
 	sox "$TEMP_RECORDING" "$RECORDING_PATH/fullalbum.flac"
 
@@ -114,7 +114,7 @@ start_vinyl() {
 		flac "fullalbum.flac" --output-name="${ALBUM_CLEAN}_copy.flac"
 	fi
     	rm "$TEMP_RECORDING"
-	rm "fullalbum.flac"
+	#rm "fullalbum.flac"
     	echo "Tracks in $RECORDING_PATH gespeichert."
 
 }
@@ -126,11 +126,6 @@ options(){
 	arecord -l
 	echo "Es muss aus dieser Liste ausgewaehlt werden um im Skript verwendet werden zu koennen."
 	read -p "Welche Ziffer ist das richtige Aufnahmegeraet?" HW_ID
-	
-	
-
-
-
 }
 
 
@@ -146,8 +141,8 @@ while true; do
     read -p "Wähle eine Option: " CHOICE
 
     case $CHOICE in
-        1) start_recording ;;
-	2) start_vinyl ;;
+        1) start_recording_autoclip ;;
+	2) start_recording_selfclip ;;
 	3) options ;;
         4) exit 0 ;;
         *) echo "Ungültige Eingabe. Bitte erneut versuchen." ;;
